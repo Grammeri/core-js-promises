@@ -59,8 +59,29 @@ function getPromiseResult(source) {
  * [Promise.resolve(1), Promise.reject(2), Promise.resolve(3)]  => Promise fulfilled with 1
  * [Promise.reject(1), Promise.reject(2), Promise.reject(3)]    => Promise rejected
  */
-function getFirstResolvedPromiseResult(/* promises */) {
-  throw new Error('Not implemented');
+function getFirstResolvedPromiseResult(promises) {
+  const mappedPromises = promises.map((p) =>
+    p.then(
+      (result) => ({ success: true, result }),
+
+      (error) => ({ success: false, error })
+    )
+  );
+
+  return Promise.race(mappedPromises).then(({ success, result, error }) => {
+    if (success) {
+      return result;
+    }
+
+    return Promise.all(mappedPromises).then((results) => {
+      const firstFulfilled = results.find((r) => r.success);
+      if (firstFulfilled) {
+        return firstFulfilled.result;
+      }
+
+      throw error;
+    });
+  });
 }
 
 /**
